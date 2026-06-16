@@ -11,10 +11,13 @@
 
 ## Current status (as of 2026-06-15)
 
-**Phase 0 — Infra & baseline reproduction: NOT STARTED (planning/alignment just completed).**
+**Phase 0 — Infra & baseline reproduction: IN PROGRESS. Scaffolding DONE & pushed to `main`.**
 
-We have: reviewed the proposal + cloned repo, aligned on strategy, written `GOALS.md`.
-We have NOT yet: set up the uv env, built `src/`, or run any code.
+Done: alignment; `GOALS.md`/`MEMORY.md`; fork reorganized (legacy/ + docs/); uv env
+(`pyproject.toml` + `uv.lock`, Python 3.11) synced to `~/.venvs/abdev`; `src/abdev/` package
+skeleton with documented seams; smoke tests pass; committed + pushed (commit `8fabb5a`).
+Remaining in Phase 0: confirm GDPa1 CSV schema + wire loaders/splits, port the eval harness
+from `legacy/`, reproduce the existing baseline numbers.
 
 ## Decisions log
 
@@ -29,10 +32,10 @@ We have NOT yet: set up the uv env, built `src/`, or run any code.
 ## Roadmap checklist
 
 ### Phase 0 — Infra & baseline reproduction
-- [ ] Set up uv environment (`pyproject.toml`)
-- [ ] Create `src/abdev/` package skeleton + `notebooks/`, `scripts/`
-- [ ] Port GDPa1 loaders + splits from `repo/data/`
-- [ ] Port eval harness (oracle, CamSol, SAP) from `repo/developability_model/`
+- [x] Set up uv environment (`pyproject.toml` + `uv.lock`, venv at `~/.venvs/abdev`)
+- [x] Create `src/abdev/` package skeleton + `notebooks/`, `scripts/`, smoke tests
+- [ ] Confirm GDPa1 CSV schema; wire `data/gdpa1.py` loaders + provided CV splits
+- [ ] Port eval harness (oracle, CamSol, SAP) from `legacy/developability_model/`
 - [ ] Reproduce existing baseline numbers (sanity check)
 
 ### Phase 1 — DFM backbone (headline a)
@@ -90,9 +93,12 @@ We have NOT yet: set up the uv env, built `src/`, or run any code.
 
 ## Changelog
 
-### 2026-06-15 — Session 1 (alignment & scaffolding docs)
+### 2026-06-15 — Session 1 (alignment + Phase 0 scaffolding)
 - Read proposal PDF (`antibody_dfm_working_doc.pdf`) and cloned/reviewed original repo.
 - Identified the gap: repo = continuous CFM in PLS latent; proposal = discrete flow matching on tokens.
-- Aligned on the 7 strategic decisions (see Decisions log / `GOALS.md §4`).
+- Aligned on the strategic decisions (see Decisions log / `GOALS.md §4`).
 - Wrote `GOALS.md` (ground truth) and `MEMORY.md` (this log).
-- **Next session:** stand up uv env + `src/abdev/` skeleton, begin Phase 0.
+- Reorganized the fork (legacy/, docs/course-reports/), added uv env + `src/abdev/` skeleton +
+  smoke tests; committed `8fabb5a` and pushed to `main`.
+- **Next session:** confirm GDPa1 schema → wire `data/gdpa1.py`; port eval harness from `legacy/`;
+  reproduce baseline numbers. Then Phase 1 (EvoDiff fine-tuning spike).
