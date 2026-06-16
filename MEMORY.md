@@ -5,7 +5,10 @@
 > Newest session entry at the top of the Changelog.
 
 **Project:** Antibody Developability via Discrete Flow Matching
-**Target:** NeurIPS 2026 workshops (SPIGM / AI for Science / FPI), plan for ~late Aug 2026.
+**Target:** NeurIPS 2026 workshops (SPIGM / AI for Science / FPI). See `GOALS.md`.
+
+> The checklist below groups work by component for tracking. It is **not a fixed sequence** —
+> the team works different parts in parallel and picks what makes sense to pursue.
 
 ---
 

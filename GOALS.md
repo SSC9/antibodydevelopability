@@ -120,9 +120,10 @@ report CIs; use the provided hierarchical-cluster/isotype splits to avoid leakag
 
 ## 9. Target venues (NeurIPS 2026 workshops)
 
-2026 dates unconfirmed; 2025 dates shown as planning anchors. **Plan for ~late Aug 2026.**
+Candidate workshops below. 2026 dates are unconfirmed; the 2025 deadlines are listed only as
+rough external reference, **not** as an internal schedule.
 
-| Workshop | 2025 deadline | Notes |
+| Workshop | 2025 deadline (ref. only) | Notes |
 |---|---|---|
 | **SPIGM** — Structured Probabilistic Inference & Generative Modeling | Aug 29, 2025 | Best fit. Chatterjee Lab submitted Entangled Schrödinger Bridge Matching here in 2025. |
 | **AI for Science: Reach and Limit of AI for Scientific Discovery** | Aug 25, 2025 | Marinka Zitnik possibly co-chair. |
@@ -158,20 +159,28 @@ antibodydevelopability/           # the fork — THE working repo (cloned into D
 non-git tarball at `./repo/`. Once `git` is unblocked we re-clone the fork properly, move the
 docs + PDF into it, reorganize legacy notebooks, and delete the tarball.)*
 
-## 11. Phased roadmap (~10 weeks)
+## 11. Workstreams (not a schedule)
 
-Reprioritized for the two headline claims + single-GPU budget. Checkboxes tracked in `MEMORY.md`.
+These are the **components of work, deliberately unordered** — the team is tackling different
+parts in parallel and decides what makes sense to pursue when. "Core" vs "stretch" denotes
+importance to the headline claims, **not** sequence. Live status is tracked in `MEMORY.md`.
 
-- **Phase 0 — Infra & baseline reproduction (~1 wk).** uv env, `src/abdev` skeleton, port GDPa1
-  loaders + eval harness from `repo/`, reproduce existing baseline numbers as a sanity check.
-- **Phase 1 — DFM backbone (~2–3 wk).** Adapt + fine-tune EvoDiff on OAS; germline-absorbing
-  source; CTMC sampler with a posterior-tempering hook; replicate Zhao-style behavior with the
-  L0 scorer under DFM sampling. **(Headline claim a.)**
-- **Phase 2 — Core scorers (~3 wk).** L0 ESM-2 baseline; **L2 SSH2.0 weak-supervision pipeline**
-  (retrain SVM → pseudo-label 100k OAS → pretrain → fine-tune on GDPa1) ablated vs L0;
-  L4 AbLang2 naturalness + α sweep. **(Headline claim b + secondary result.)**
-- **Phase 3 — Uncertainty / physics (stretch).** L1 PROPERMAB features; L3 deep ensemble + LCB.
-- **Phase 4 — Writeup.** Ablations, figures, paper draft.
+- **Developability oracle / scorers (core).** L0 ESM-2 baseline; **L2 SSH2.0 weak-supervision
+  pipeline** ablated vs L0; L4 AbLang2 naturalness + α sweep. Supports headline claim (b) and the
+  naturalness–developability result. *(Can be developed and validated entirely independently of
+  the generative model — see §8.)*
+- **DFM backbone (core).** Adapt + fine-tune EvoDiff on OAS; germline-absorbing source; CTMC
+  sampler with a posterior-tempering hook; replicate Zhao-style guided generation under DFM
+  sampling. Supports headline claim (a).
+- **Infra & baseline reproduction.** uv env, `src/abdev` package, GDPa1 loaders + eval harness
+  ported from `legacy/`, reproduce the existing baseline numbers as a sanity check.
+- **Uncertainty & physics (stretch).** L1 PROPERMAB features; L3 deep ensemble + LCB guidance.
+- **Writeup.** Ablations, figures, paper draft.
+
+**Coupling (dependencies, not timing):** the oracle and the DFM backbone are independent and only
+meet at guided-sampling/eval time. The oracle is a self-contained supervised-regression problem
+that can be validated before any generative work. Baseline reproduction is useful early but is
+not a hard gate on anything.
 - **(Deferred / 2nd paper)** Pareto-front optimization (proposal §7).
 
 ## 12. Open questions / risks
