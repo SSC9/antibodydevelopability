@@ -1,88 +1,86 @@
-# Predictive and Generative Modeling of Therapeutic Antibody Developability
-> Using fine-tuned protein language models to predict and optimize antibody developability from sequence alone.
+# Antibody Developability via Discrete Flow Matching
 
-GitHub Repo for BMI702 Final Project, Sidhant Puntambekar and Jack Hwang
+> Generating therapeutic antibody sequences biased toward developability using **discrete flow
+> matching (DFM)** with **posterior-tempered classifier guidance**, and a scorer bootstrapped
+> from **OAS-scale weak supervision** to overcome the 246-label data bottleneck.
 
-## Overview
+🎯 **Target:** NeurIPS 2026 workshops (SPIGM / AI for Science / FPI).
 
-Therapeutic antibody development is costly and time-intensive, with many candidates failing due to poor **developability**. Developability metrics refer to the set of biophysical properties an antibody must satisfy to be successfully manufactured and safely administered. This project investigates whether sequence-based protein language models can:
-
-- **(Task A)** Predict developability metrics and downstream therapeutic approval from amino acid sequence alone
-- **(Task B)** Enable lead optimization of developability properties through guided CDR3 sequence generation
-
-By operating from sequence only (no experimental assays required), these tools are designed for early-stage lead evaluation.
-
----
-
-## Methods
-
-### Task A: Developability Prediction
-
-**Approval Prediction Baseline**
-- XGBoost classifier trained on 11 experimentally measured biophysical features (HIC, SMAC, HAC, PR_Ova, PR_CHO, SEC %Monomer, AC-SINS pH 6.0/7.4, Tm1, Tm2, Titer)
-- Bootstrapped over 20 stratified 80:20 train-test splits
-- Median AUPRC: **0.665** vs. null AUPRC: 0.593
-
-**Developability Metric Prediction Baseline**
-- Ridge regression on mean-pooled p-IgGen sequence embeddings
-- Evaluated under 5-fold hierarchical cluster, IgG isotype-stratified cross-validation
-- Best cross-validation Spearman ρ: PR_Ova (0.549), PR_CHO (0.496), AC-SINS pH7.4 (0.394), HIC (0.335)
-
-**Planned: AbLang2 Fine-tuning**
-- LoRA fine-tuning of AbLang2 encoder on GDPa1 for approval classification and per-metric regression
-- Compared against XGBoost (experimental features upper bound) and p-IgGen Ridge (sequence-only baseline)
-
-### Task B: Generative CDR3 Optimization
-
-The generative pipeline operates in three stages:
-
-1. **Oracle**: Ridge regression (α=0.1) trained on 480-dimensional AbLang2 full-sequence embeddings to predict HIC and AC-SINS (Spearman ρ = 0.32 and 0.445 on held-out test set)
-2. **PLS Latent Space**: CDR3 embeddings compressed from 480d → 10d via Partial Least Squares, maximizing covariance with HIC and AC-SINS labels
-3. **Flow Model**: FiLM-conditioned MLP velocity network trained with the conditional flow matching (CFM) objective, conditioned on masked framework embeddings and desired developability targets
-
-**Inference**: For each test antibody, the flow model generates 50 CDR3 targets in PLS space; AbLang2 decoding is reweighted toward the top-5 targets to produce 20 candidate sequences; the oracle selects the best by composite HIC + AC-SINS z-score.
+📄 **Read first:**
+- [`GOALS.md`](GOALS.md) — project ground truth: objective, locked decisions, scorer ladder, roadmap.
+- [`MEMORY.md`](MEMORY.md) — living progress log (update at the end of each work session).
+- [`docs/antibody_dfm_working_doc.pdf`](docs/antibody_dfm_working_doc.pdf) — theory & method working document.
 
 ---
 
-## Results
+## Status
 
-### Generative Pipeline (n=50 held-out antibodies)
+Active redevelopment. We are pivoting from the original BMI702 project (continuous conditional
+flow matching in a PLS latent — see **Background** below) to **genuine discrete flow matching on
+amino-acid tokens**. The original notebooks are preserved under [`legacy/`](legacy/) as a baseline.
 
-| Metric | Parent | Baseline (AbLang2) | Guided (Flow + AbLang2) |
-|---|---|---|---|
-| Oracle HIC (↓) | 2.738 ± 0.048 | 2.466 ± 0.043 | 2.493 ± 0.046 |
-| Oracle AC-SINS (↓) | 3.741 ± 1.215 | −0.545 ± 1.178 | −0.441 ± 1.044 |
-| CamSol solubility (↑) | −0.004 ± 0.056 | 0.564 ± 0.071 | 0.649 ± 0.078 |
-| SAP score (↓) | 0.449 ± 0.016 | 0.216 ± 0.019 | 0.242 ± 0.020 |
+Current phase: **Phase 0 — infra & baseline reproduction** (see `MEMORY.md` for the live checklist).
 
-All improvements over parent are statistically significant (paired t-test, p < 0.001). Guided and unguided conditions perform comparably, suggesting AbLang2's language model prior is the primary driver of improvement at this data scale.
+## Setup (uv)
+
+This project uses [uv](https://docs.astral.sh/uv/). **Important:** because this repo lives inside a
+Google Drive folder, keep the virtualenv *outside* Drive so a multi-GB torch env doesn't sync:
+
+```bash
+# one-time per machine: point uv's venv outside Drive (add to your shell profile)
+export UV_PROJECT_ENVIRONMENT="$HOME/.venvs/abdev"
+
+cd antibodydevelopability
+uv sync                       # core deps (scorers L0/L4, baselines, eval)
+uv run pytest                 # smoke tests should pass
+
+# per-phase extras, installed on demand:
+uv sync --extra backbone      # EvoDiff DFM backbone (Phase 1)
+uv sync --extra oas --extra features   # SSH2.0 / OAS pipeline (Phase 2)
+uv sync --extra physics       # TAP / ImmuneBuilder (Phase 3, heavy)
+```
+
+> If `git` errors with an Xcode-license message, it's PATH ordering — use Homebrew's git:
+> `export PATH=/opt/homebrew/bin:$PATH`.
+
+## Layout
+
+```
+src/abdev/        # the package
+  data/           #   GDPa1 + OAS loaders, CV splits
+  backbone/       #   EvoDiff adapter, germline-absorbing source, CTMC sampler
+  guidance/       #   posterior tempering (Eq. 8), composite scorer (Eq. 9)
+  scorers/        #   L0 ESM-2 · L1 physics · L2 SSH2.0 · L3 ensemble · L4 AbLang2
+  eval/           #   developability metrics + leakage-safe CV
+scripts/          # CLI entry points (per phase)
+notebooks/        # exploration only
+data/             # GDPa1 CSV (tracked); caches/weights/OAS gitignored
+legacy/           # original BMI702 notebooks (baseline)
+docs/             # theory doc + course reports
+```
 
 ---
 
-## Data
+## Background (BMI702 v1, now the baseline)
 
-**PROPHET-Ab (GDPa1)** — [Arsiwala et al., mAbs 2025](https://doi.org/10.1080/19420862.2025.2593055)
-- 246 therapeutic antibodies (106 FDA-approved, 135 clinical-stage, 5 withdrawn)
-- Paired VH/VL sequences + 11 experimentally measured biophysical features
-- 5-fold hierarchical cluster, IgG isotype-stratified splits provided
+The original project (Sidhant Puntambekar & Jack Hwang, Dept. of Biomedical Informatics, HMS)
+asked whether sequence-based protein language models can predict developability and enable
+guided CDR3 optimization. Headline results (now our comparison anchors):
 
-**OAS (Observed Antibody Space)** — [Olsen et al., Protein Science 2022](https://doi.org/10.1002/pro.4205) *(planned for flow model pretraining)*
-- >2 billion antibody sequences from >80 studies
+- **Prediction:** XGBoost on 11 biophysical features → approval AUPRC 0.665; Ridge on p-IgGen /
+  AbLang2 embeddings for per-metric regression.
+- **Generation:** oracle → PLS latent (480d→10d) → continuous CFM → AbLang2 reweighted decoding.
+  Guided ≈ unguided (AbLang2's prior dominated at this data scale) — the gap we aim to close.
 
----
+Full numbers and report PDFs: [`legacy/`](legacy/) and [`docs/course-reports/`](docs/course-reports/).
 
-**Key dependencies:**
-- `ablang2` — antibody language model backbone
-- `scikit-learn` — Ridge regression, cross-validation
-- `xgboost` — approval prediction baseline
-- `torch` — flow model training
-- `torchdiffeq` — ODE integration at inference
+**Data:** GDPa1 / PROPHET-Ab (246 paired antibodies; Arsiwala et al., mAbs 2025); OAS
+(Olsen et al., Protein Science 2022).
 
 ---
 
-## Authors
+## AI assistance
 
-**Jack Hwang** — Generative pipeline (PLS dimensionality reduction, conditional flow matching, steered AbLang2 generation)  
-**Sidhant Puntambekar** — Predictive baselines (Ridge regression, XGBoost), AbLang2 fine-tuning  
-
-Department of Biomedical Informatics, Harvard Medical School
+AI coding assistants (Claude) were used to help with project scaffolding, refactoring, and
+documentation. All research direction, methodological decisions, and final review are the
+authors'.

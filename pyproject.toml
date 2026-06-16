@@ -1,0 +1,62 @@
+[project]
+name = "abdev"
+version = "0.1.0"
+description = "Antibody developability via discrete flow matching with posterior-tempered guidance"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+dependencies = [
+    # --- core: scorers (L0/L4), baselines, eval ---
+    "torch>=2.2",
+    "numpy<2.0",
+    "pandas>=2.0",
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    "transformers>=4.40",   # ESM-2 (facebook/esm2_t33_650M_UR50D)
+    "ablang2>=0.1",         # AbLang-2 PLL (L4) + embeddings
+    "xgboost>=2.0",         # approval-prediction baseline
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "tqdm>=4.66",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Discrete flow matching backbone (Phase 1). Installed on demand: `uv sync --extra backbone`.
+backbone = [
+    "evodiff",
+    "sequence-models",
+    "torchdiffeq",          # also used by the legacy continuous-CFM baseline
+]
+# OAS access for the SSH2.0 pseudo-labeling pipeline (Phase 2, L2).
+oas = [
+    "pyarrow>=15.0",
+    # "oas-utils",          # TODO: confirm exact PyPI/GitHub name before pinning
+]
+# Sequence descriptors: CKSAAGP for SSH2.0 (L2), PROPERMAB features (L1).
+features = [
+    # "iFeatureOmega",      # TODO: confirm install source (PyPI vs GitHub)
+]
+# Structure-based TAP scorer (L1, terminal only). Heavy: pulls OpenMM + ANARCI.
+physics = [
+    "ImmuneBuilder",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "ipykernel>=6.29",
+    "jupyter>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/abdev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

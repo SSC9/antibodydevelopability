@@ -207,3 +207,18 @@ marimo/_lsp/
 __marimo__/
 
 .vscode/
+
+# ---- abdev project: heavy artifacts (never commit, keep out of Drive sync) ----
+# Model weights / embedding caches / OAS subsets. The GDPa1 CSV/XLSX stay tracked.
+data/cache/
+data/oas/
+data/weights/
+data/pseudolabels/
+*.pt
+*.ckpt
+*.safetensors
+*.npy
+*.npz
+.hf_cache/
+wandb/
+# uv venv lives OUTSIDE Drive (UV_PROJECT_ENVIRONMENT=~/.venvs/abdev); .venv is ignored above.
