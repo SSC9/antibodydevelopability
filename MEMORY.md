@@ -112,7 +112,29 @@ from `legacy/`, reproduce the existing baseline numbers.
   `foralumab` once appeared in GDPa1 `AC-SINS_pH6.0` for blosozumab via a Drive edit; restored from
   git on 2026-06-15). Treat the git version as canonical; fix data at the source.
 
+## Working preferences
+
+- **Checkpointed, resumable long-running jobs.** For long generation/embedding steps, build scripts
+  that checkpoint incrementally (per-shard / per-batch) and resume where they left off if
+  interrupted — never restart from scratch. Surface progress clearly. Such steps should be
+  standalone scripts a collaborator can run concurrently.
+
 ## Changelog
+
+### 2026-06-15 — Session 3 (oracle experiment design + SSH2.0 recipe recovery)
+- Locked the HIC weak-supervision experiment as **Option C**: standard 5-fold CV on **all 246**
+  (isotype-stratified folds), with SSH2.0 **retrained blind to each test fold** (per-fold MRMD2.0
+  reselection). Models: **SSH2-direct, GoldOnly-Ridge, GoldOnly-MLP, WeakSup-MLP** (ESM-2 frozen
+  embeddings; Ridge = honest bar, MLP = matched control). Headline = WeakSup − GoldOnly.
+- **Recovered SSH2.0's full training recipe** from the paper and verified against our data:
+  label = (SMAC>12.8 OR SGAC-SINS<370 OR HIC>11.7) → 37 pos / 94 neg on 131 (drop the 6
+  "Disclaimers" rows); feature subsets 29/31/35; RBF, γ in `.model` files, C via grid-search;
+  train with `sklearn.svm.SVC` (= libsvm). **Validation gate:** reproduce LOOCV acc ~83.97% and
+  match `ssh2cli` before any per-fold use.
+- Ginkgo abdev-benchmark: same GDPa1 + folds; Spearman + top-10% recall; **Ridge** is the validated
+  head (esm2_ridge HIC ≈ 0.40 heldout); physics (MOE/Aggrescan3D) lead absolute (~0.5–0.66).
+- **Next:** within-cluster HIC sanity check → SSH2.0 reproduction + validation gate → embeddings
+  (checkpointed script) → 4-model CV.
 
 ### 2026-06-15 — Session 1 (alignment + Phase 0 scaffolding)
 - Read proposal PDF (`antibody_dfm_working_doc.pdf`) and cloned/reviewed original repo.
