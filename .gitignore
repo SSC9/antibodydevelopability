@@ -224,10 +224,12 @@ wandb/
 # uv venv lives OUTSIDE Drive (UV_PROJECT_ENVIRONMENT=~/.venvs/abdev); .venv is ignored above.
 
 # ---- SSH2.0 / ssh2cli ----
-*.exe                                   # original SSH2.0 Windows binaries (68 MB), not needed
+# Original SSH2.0 Windows release (68 MB exe + GUI cruft); clean reimplementation is in ssh2cli/.
+*.exe
 .DS_Store
-data/SSH2.0/SSH2.0_from_tar_file/       # raw original release; clean reimplementation is in ssh2cli/
-ssh2cli/.build-venv/                     # PyInstaller build env
+data/SSH2.0/SSH2.0_from_tar_file/
+# ssh2cli build/run artifacts
+ssh2cli/.build-venv/
 ssh2cli/build/
 ssh2cli/dist/
-ssh2cli/results.tsv                      # example run output
+ssh2cli/results.tsv
