@@ -104,6 +104,13 @@ from `legacy/`, reproduce the existing baseline numbers.
 - **uv venv lives OUTSIDE Drive** at `~/.venvs/abdev` (set `UV_PROJECT_ENVIRONMENT`), so a
   multi-GB torch venv never Drive-syncs. Collaborators must export the same var (see README).
 - git: use Homebrew's (`export PATH=/opt/homebrew/bin:$PATH`); `/usr/bin/git` errors on Xcode license.
+- **`ssh2cli/`** = clean pure-Python SSH2.0 reimplementation (CKSAAGP + 3 RBF SVMs, majority vote);
+  validated bit-for-bit vs reference LIBSVM. This is the tool for generating SSH2.0 values/probs at
+  scale. Run: `python3 ssh2cli/ssh2.py --hc h.fasta --lc l.fasta -o out.tsv`. The 68 MB original
+  Windows release (`data/SSH2.0/SSH2.0_from_tar_file/`, `*.exe`) is gitignored.
+- **Data hygiene caution:** CSVs live in Drive and can silently diverge from git (a stray
+  `foralumab` once appeared in GDPa1 `AC-SINS_pH6.0` for blosozumab via a Drive edit; restored from
+  git on 2026-06-15). Treat the git version as canonical; fix data at the source.
 
 ## Changelog
 
@@ -123,5 +130,10 @@ from `legacy/`, reproduce the existing baseline numbers.
 - Built + executed `notebooks/01_ssh2_gdpa1_contamination.ipynb`. Result: **total fold-level
   contamination** (0/5 clean folds in all schemes); HIC rank-consistent across sources, diff scale.
   See Key findings above.
+- Fixed a Drive-introduced corruption in GDPa1 (`foralumab` in blosozumab's `AC-SINS_pH6.0`) by
+  restoring from git; verified column is numeric again. Audit results unaffected (HIC-only).
+- Committed `ssh2cli/` (clean SSH2.0 reimplementation, smoke-tested) + `jain_et_al_ssh2_training.csv`
+  (commit 239d250); gitignored the 68 MB Windows release + build artifacts.
 - **Next:** choose the oracle-evaluation path given no clean fold (individual-level holdout vs custom
-  germline regrouping vs reframed comparison), then build the HIC oracle (L0 vs L2 vs SSH2.0-direct).
+  germline regrouping vs reframed comparison), then build the HIC oracle (L0 vs L2 vs SSH2.0-direct,
+  using `ssh2cli` to pseudo-label OAS).
