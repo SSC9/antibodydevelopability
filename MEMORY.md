@@ -22,6 +22,17 @@ skeleton with documented seams; smoke tests pass; committed + pushed (commit `8f
 Remaining in Phase 0: confirm GDPa1 CSV schema + wire loaders/splits, port the eval harness
 from `legacy/`, reproduce the existing baseline numbers.
 
+## Key findings
+
+- **2026-06-15 — SSH2.0↔GDPa1 contamination is total at the fold level.** SSH2.0's training set =
+  Jain et al. 2017 (137 mAbs); **135/137 are in GDPa1** (→ 135/246 = 55% contaminated, 111 clean
+  individuals). **No clean fold in any of the 3 CV schemes** (hierarchical_cluster, isotype-strat,
+  random — all 0/5). GDPa1 HIC vs Jain HIC are rank-consistent (Spearman 0.97) but different scale
+  (Pearson 0.70). HIC distribution of the SSH2.0 subset ≈ full GDPa1 (no target-range shift).
+  See `notebooks/01_ssh2_gdpa1_contamination.ipynb`. → standard cluster-CV can't give an
+  SSH2.0-naive test fold; must choose an evaluation path (individual-level holdout / custom germline
+  regrouping / reframed comparison) before building the HIC oracle.
+
 ## Decisions log
 
 - **2026-06-15** — Full pivot to discrete flow matching (drop continuous-CFM/PLS core; keep it as baseline). See `GOALS.md §4`.
@@ -105,3 +116,12 @@ from `legacy/`, reproduce the existing baseline numbers.
   smoke tests; committed `8fabb5a` and pushed to `main`.
 - **Next session:** confirm GDPa1 schema → wire `data/gdpa1.py`; port eval harness from `legacy/`;
   reproduce baseline numbers. Then Phase 1 (EvoDiff fine-tuning spike).
+
+### 2026-06-15 — Session 2 (SSH2.0↔GDPa1 contamination audit)
+- Reframed GOALS §11 as unordered workstreams; dropped internal-deadline framing (commit 764135a).
+- Discussed DFM↔oracle intuition and the weak-supervision experiment design (leakage, CV, baselines).
+- Built + executed `notebooks/01_ssh2_gdpa1_contamination.ipynb`. Result: **total fold-level
+  contamination** (0/5 clean folds in all schemes); HIC rank-consistent across sources, diff scale.
+  See Key findings above.
+- **Next:** choose the oracle-evaluation path given no clean fold (individual-level holdout vs custom
+  germline regrouping vs reframed comparison), then build the HIC oracle (L0 vs L2 vs SSH2.0-direct).
