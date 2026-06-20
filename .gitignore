@@ -212,6 +212,7 @@ __marimo__/
 # Model weights / embedding caches / OAS subsets. The GDPa1 CSV/XLSX stay tracked.
 data/cache/
 data/oas/
+data/embeddings/
 data/weights/
 data/pseudolabels/
 *.pt
