@@ -49,7 +49,8 @@ therapeutically relevant).
 | **Headline contributions** | (a) **DFM + posterior tempering** framework; (b) **SSH2.0 weak supervision** scorer (the proposal's "core novel contribution") | Two coupled claims forming one story: the framework needs a good scorer; the scorer is what makes guidance work under 246 labels. |
 | **Backbone** | **Fine-tune EvoDiff** on OAS (not retrain from scratch) | Single-GPU/Colab Pro budget. Novelty is in scorer + guidance, not a new generative architecture. |
 | **Source distribution** | **Germline-absorbing** (default), compare vs. masked-absorbing | Keeps intermediate states biologically valid (varying somatic hypermutation); strong inductive bias at no extra compute. |
-| **OAS subset** | **~100k paired sequences** for pseudo-labeling (not 500k) | Compute budget; 100k is enough to demonstrate weak-supervision lift. |
+| **OAS subset** | **~100k paired human sequences** for pseudo-labeling, deduped vs **GDPa1 ∪ Jain131 ∪ GDPa3** | Compute budget; dedup keeps SSH2.0 *generalizing* (not regurgitating training antibodies) and protects the held-out test. |
+| **HIC-oracle eval / leakage control** | **External held-out on GDPa3** (80 abs; verified 0 sequence overlap with GDPa1 *and* with SSH2.0's Jain131 set). Train on all GDPa1 (+OAS weak-sup), test once on GDPa3. | A clean external test **dissolves the SSH2.0 ⊂ GDPa1 contamination** — no per-fold retraining needed. Test ∉ any training set ⇒ no leakage; GDPa3 is the community benchmark's own held-out ⇒ directly comparable. |
 | **Compute** | Single GPU / Colab Pro | Constrains backbone + OAS subset size as above. |
 | **Target venues** | NeurIPS 2026 workshops (see §9) | Submission-shaped scope (~8 pages, focused contribution). |
 
@@ -115,8 +116,15 @@ history is preserved for reference without polluting the new codebase.
 **Evaluation axes:** oracle HIC / AC-SINS; CamSol solubility; SAP; AbLang2 naturalness (PLL);
 distributional metrics (sequence recovery, germline identity); binding preservation.
 
-**Stats discipline:** N=246 is tiny — leave-one-out or repeated 5-fold CV for all scorers;
-report CIs; use the provided hierarchical-cluster/isotype splits to avoid leakage.
+**Held-out test set — GDPa3** (`data/GDPa3_20260106_full.xlsx`, 80 abs, same PROPHET-Ab assays
+incl. `hic_rt` on the GDPa1 scale). It is the Ginkgo benchmark's own held-out set and is verified
+**disjoint** from GDPa1 and from SSH2.0's Jain131 set — our clean external test (see `MEMORY.md`
+for the full HIC-oracle model table + leakage argument).
+
+**Stats discipline:** N=246 is tiny — use the provided isotype-stratified CV folds for
+model/hyperparameter selection only; make the headline generalization claim on the **external
+GDPa3 held-out** (train on all GDPa1, test once), with bootstrap CIs. Metric: Spearman ρ (+ top-10%
+recall). This replaces the earlier per-fold CV-leakage workaround.
 
 ## 9. Target venues (NeurIPS 2026 workshops)
 

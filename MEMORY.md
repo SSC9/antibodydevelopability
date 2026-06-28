@@ -32,6 +32,53 @@ from `legacy/`, reproduce the existing baseline numbers.
   See `notebooks/01_ssh2_gdpa1_contamination.ipynb`. → standard cluster-CV can't give an
   SSH2.0-naive test fold; must choose an evaluation path (individual-level holdout / custom germline
   regrouping / reframed comparison) before building the HIC oracle.
+  **[RESOLVED 2026-06-15 by GDPa3 — see next bullet.]**
+- **2026-06-15 — GDPa3 is a clean external test → contamination dissolved.** GDPa3
+  (`data/GDPa3_20260106_full.xlsx`, 80 abs, PROPHET-Ab assays incl. `hic_rt` on the GDPa1 scale) has
+  **0 exact VH overlap with GDPa1 and 0 with SSH2.0/Jain137** (nearest neighbor ≤ 0.92 identity).
+  It's the Ginkgo benchmark's own held-out set → train on all GDPa1 (+OAS weak-sup), test on GDPa3,
+  dropping the per-fold/MRMD2.0 workaround entirely. See "Current experiment" below.
+
+## Current experiment — HIC weak-supervision oracle (GDPa3 held-out)
+
+**Question:** does SSH2.0 → OAS weak-supervision *pretraining* improve a sequence-based HIC oracle
+vs gold-only, on a clean external test?
+
+**Design (leakage-free):** train every model on **all of GDPa1 (246)**; evaluate once on
+**GDPa3 (80)** — the Ginkgo benchmark's held-out set, verified **0 sequence overlap** with both
+GDPa1 and SSH2.0's Jain131 training set. Since the test ∉ every training set there is no leakage;
+the GDPa1↔Jain overlap is training-side only and **symmetric** across models (GoldOnly sees the Jain
+antibodies' gold HIC; WeakSup sees that *plus* SSH2.0's noisy labels — so the only delta is OAS).
+**Per-fold SSH2.0 / MRMD2.0 retraining is NOT needed** → use `ssh2cli` as-is to pseudo-label OAS.
+GDPa1 isotype-stratified CV is used **only** for hyperparameter selection (never touch GDPa3 until
+the final test). Metric: **Spearman ρ on `hic_rt`** (rank-based ⇒ scale-free) + top-10% recall,
+bootstrap CIs (n=80). GDPa3 per-antibody HIC = average the tidy-format replicates (79 usable).
+
+**Models** (all: train GDPa1 → test GDPa3; backbones = ESM-2 primary, AbLang2 ablation):
+
+| # | Model | Backbone | Head | OAS pretrain | SSH2.0 role | Purpose |
+|---|---|---|---|---|---|---|
+| 1 | SSH2-direct | — (CKSAAGP) | 3×SVM (`ssh2cli`) | no | **is** predictor | floor |
+| 2 | GoldOnly-Ridge·ESM2 | ESM-2 | Ridge | no | none | honest bar (benchmark-comparable) |
+| 3 | GoldOnly-Ridge·AbLang2 | AbLang2 | Ridge | no | none | bar, antibody backbone |
+| 4 | GoldOnly-MLP·ESM2 | ESM-2 | MLP | no | none | arch-matched control |
+| 5 | GoldOnly-MLP·AbLang2 | AbLang2 | MLP | no | none | arch-matched control |
+| 6 | SSH2-feature·ESM2 | ESM-2 + SSH2 prob | Ridge | no | input **feature** | isolates raw SSH2.0 signal (no OAS) |
+| 7 | WeakSup-MLP·ESM2 | ESM-2 | MLP | ✅100k | OAS **labeler** | ★ the test (primary) |
+| 8 | WeakSup-MLP·AbLang2 | AbLang2 | MLP | ✅100k | OAS **labeler** | the test (backbone ablation) |
+
+**Key comparisons:** 7−4 (pretraining effect, same arch) · 7−2 (vs best practice) · 7−6 (OAS
+amplification vs raw SSH2.0 signal) · 7 vs 8 / 2 vs 3 (backbone; AbLang2 already encodes OAS) ·
+1 (floor) · data-efficiency = train GDPa1 subsets → test GDPa3.
+Minimum viable headline = {1,2,4,7} on ESM-2; add {3,5,8} + 6 for the full story.
+
+**SSH2-direct output & eval:** `ssh2cli` returns a continuous **risk probability** P(high HI risk).
+We don't compare it on the HIC scale — we rank it against true `hic_rt` via Spearman (higher risk ⇒
+higher HIC expected). Scale mismatch is irrelevant for a rank metric; probabilities are coarse
+(voting+Platt) so expect a modest ceiling — fine for a floor.
+
+**OAS:** ~100k paired human, deduped vs **GDPa1 ∪ Jain131 ∪ GDPa3** (test integrity + keeps SSH2.0
+generalizing, not regurgitating). Embed GDPa1, GDPa3, and OAS with the **same** ESM-2 fn.
 
 ## Decisions log
 
@@ -120,6 +167,19 @@ from `legacy/`, reproduce the existing baseline numbers.
   standalone scripts a collaborator can run concurrently.
 
 ## Changelog
+
+### 2026-06-15 — Session 4 (GDPa3 held-out → simplified, leakage-free design)
+- Found GDPa3 (Ginkgo benchmark held-out, 80 abs, `hic_rt` on GDPa1 scale). Verified **0 overlap**
+  with GDPa1 and with SSH2.0/Jain137 → clean external test.
+- **Switched the HIC experiment to GDPa3-held-out: train on all GDPa1 (+OAS weak-sup), test on
+  GDPa3.** Dropped per-fold SSH2.0 / MRMD2.0 (no longer needed); use `ssh2cli` as-is to label OAS.
+- Locked the 8-model set (see "Current experiment"): SSH2-direct, GoldOnly-{Ridge,MLP}×{ESM2,AbLang2},
+  SSH2-feature, WeakSup-MLP×{ESM2,AbLang2}. Added SSH2-feature to isolate OAS amplification from raw
+  SSH2.0 signal. OAS dedup = GDPa1 ∪ Jain131 ∪ GDPa3.
+- Added `openpyxl` (read GDPa3 xlsx). ESM-2 default `t33_650M` pending a quick check vs the
+  benchmark's featurizer for exact comparability.
+- **Next:** `ssh2cli` validation gate → embeddings (checkpointed, incl. GDPa3) → 4-model headline
+  {1,2,4,7} on ESM-2 → full set.
 
 ### 2026-06-15 — Session 3 (oracle experiment design + SSH2.0 recipe recovery)
 - Locked the HIC weak-supervision experiment as **Option C**: standard 5-fold CV on **all 246**
