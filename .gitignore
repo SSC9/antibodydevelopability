@@ -228,6 +228,7 @@ wandb/
 # Original SSH2.0 Windows release (68 MB exe + GUI cruft); clean reimplementation is in ssh2cli/.
 *.exe
 .DS_Store
+~$*
 data/SSH2.0/SSH2.0_from_tar_file/
 # ssh2cli build/run artifacts
 ssh2cli/.build-venv/
