@@ -43,7 +43,7 @@ DATA_DIR = os.path.join(BASE, 'data')
 
 
 def _format_table(rows):
-    cols = ['No', 'Name', 'Length', 'Probability', 'Result']
+    cols = ['No', 'Name', 'Length', 'Probability', 'P_positive', 'Result']
     widths = {c: len(c) for c in cols}
     str_rows = []
     for r in rows:
@@ -52,6 +52,7 @@ def _format_table(rows):
             'Name': str(r['Name']),
             'Length': str(r['Length']),
             'Probability': f"{r['Probability']:.5f}",
+            'P_positive': f"{r['P_positive']:.5f}",
             'Result': str(r['Result']),
         }
         for c in cols:
@@ -65,13 +66,13 @@ def _format_table(rows):
 
 
 def _write_tsv(rows, path):
-    cols = ['No', 'Name', 'Length', 'Probability', 'Result']
+    cols = ['No', 'Name', 'Length', 'Probability', 'P_positive', 'Result']
     with open(path, 'w') as f:
         f.write('\t'.join(cols) + '\n')
         for r in rows:
             f.write('\t'.join([
                 str(r['No']), str(r['Name']), str(r['Length']),
-                f"{r['Probability']:.5f}", str(r['Result']),
+                f"{r['Probability']:.5f}", f"{r['P_positive']:.5f}", str(r['Result']),
             ]) + '\n')
 
 

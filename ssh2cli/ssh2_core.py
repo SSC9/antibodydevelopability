@@ -279,17 +279,23 @@ def predict(merged_records, data_dir):
 
         result = 1 if votes >= 2 else 0
         # Probability: average of the agreeing models' P(class 1), as in original.
+        # NOTE: this is "confidence in the predicted call" (a confident negative also scores
+        # high), so it is NOT monotonic in risk and must not be used for ranking.
         if votes > 1:
             s = sum(p for p in prob_class1 if p >= 0.5)
             prob = s / votes
         else:
             s = sum(p for p in prob_class1 if p < 0.5)
             prob = s / (3 - votes)
+        # P_positive: mean P(positive class) across the three sub-models. This IS monotonic in
+        # hydrophobic-interaction risk and is the score to use for ranking / as a soft pseudo-label.
+        p_positive = sum(prob_class1) / len(prob_class1)
         results.append({
             'No': n,
             'Name': name,
             'Length': len(seq),
             'Probability': round(prob, 5),
+            'P_positive': round(p_positive, 5),
             'Result': result,
         })
     return results

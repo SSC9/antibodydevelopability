@@ -78,7 +78,24 @@ higher HIC expected). Scale mismatch is irrelevant for a rank metric; probabilit
 (voting+Platt) so expect a modest ceiling — fine for a floor.
 
 **OAS:** ~100k paired human, deduped vs **GDPa1 ∪ Jain131 ∪ GDPa3** (test integrity + keeps SSH2.0
-generalizing, not regurgitating). Embed GDPa1, GDPa3, and OAS with the **same** ESM-2 fn.
+generalizing, not regurgitating).
+
+**Embeddings (locked):** backbones = **ESM2-650M** (`t33_650M`, 1280-d — primary/downstream) +
+**ESM2-8M** (`t6_8M`, 320-d — exact benchmark anchor) + **AbLang2-paired** (antibody ablation).
+Benchmark-anchor recipe (matches `models/esm2_ridge`): VH & VL embedded **separately**, mask-aware
+mean-pool of last hidden state, concat `[vh, vl]` (8M→640-d), Ridge α=1.0, no standardization.
+Scheme for all ESM-2 = **separate-then-concat** (principled for single-chain LMs); AbLang2 uses its
+**native paired** representation. **Store pooled only — no per-residue raw** (storage): per chain
+save **mean-pool + CLS** (same dim; CLS is *not* lower-dim, just one token's vector; ESM-2 mean
+usually ≥ CLS since ESM-2 has no CLS training objective — store both to compare). Embed GDPa1,
+GDPa3, OAS with the identical fn per backbone. **ESM-C = future-work/ablation** (use ESM-2 for
+benchmark parity; preempt the reviewer question in the writeup).
+
+**`ssh2cli` validated (2026-06-15):** on Jain-131 — sens 1.00, spec 0.755, acc 0.824 (≈ paper LOOCV
+1.00/0.777/0.840). Added monotonic **`P_positive`** = mean P(positive) over the 3 SVMs (130 distinct
+values; Spearman 0.47 vs HIC RT). Use `P_positive` for SSH2-direct ranking + as the OAS soft
+pseudo-label (NOT the `Probability`/confidence-in-call field). No retraining/MRMD2.0 — `ssh2cli`
+(original weights) used as-is.
 
 ## Decisions log
 
