@@ -183,6 +183,20 @@ pseudo-label (NOT the `Probability`/confidence-in-call field). No retraining/MRM
   interrupted — never restart from scratch. Surface progress clearly. Such steps should be
   standalone scripts a collaborator can run concurrently.
 
+## Results so far (GDPa3 held-out, Spearman ρ on hic_rt; no-std Ridge α=1.0 unless noted)
+
+| Model | ρ (95% CI) | note |
+|---|---|---|
+| SSH2-direct (floor) | 0.175 (−0.06..0.38) | raw weak labeler |
+| GoldOnly esm2-8m mean | **0.403** (0.21..0.59) | **= benchmark `esm2_ridge` (0.403) → pipeline validated** |
+| GoldOnly esm2-650m mean | 0.425 (0.23..0.59) | |
+| GoldOnly **esm2-650m CLS** | **0.508** (0.32..0.66) | **best bar; beats all benchmark embeddings, rivals physics MOE 0.495** |
+| GoldOnly ablang2-paired mean | 0.214 (−0.01..0.44) | "already-encodes-OAS" backbone is weaker |
+| SSH2-feature esm2-650m (std) | 0.250 vs GoldOnly-std 0.264 | raw SSH2 feature adds no lift |
+
+Findings: 650M > 8M; **CLS > mean (650M)**; AbLang2 < ESM-2; standardization hurts (8m 0.403→0.106).
+**Bar WeakSup must beat ≈ 0.51 (esm2-650m CLS).** Hyperparameter (α) tuning via GDPa1 CV = a refinement.
+
 ## Track ownership (avoid Drive/file collisions)
 
 - **Track A (this line of work):** `src/abdev/**`, `scripts/pseudolabel_oas.py`,
