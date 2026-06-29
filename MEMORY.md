@@ -183,7 +183,30 @@ pseudo-label (NOT the `Probability`/confidence-in-call field). No retraining/MRM
   interrupted — never restart from scratch. Surface progress clearly. Such steps should be
   standalone scripts a collaborator can run concurrently.
 
+## Track ownership (avoid Drive/file collisions)
+
+- **Track A (this line of work):** `src/abdev/**`, `scripts/pseudolabel_oas.py`,
+  `notebooks/02_hic_oracle_experiment.ipynb`, `ssh2cli/**`, tests.
+- **Track B (collaborator):** `scripts/build_oas_subset.py`, `scripts/embed_sequences.py`,
+  `data/oas/**`, `data/embeddings/**`.
+- Both push to `main`; stage files explicitly (never `git add -A`), `git fetch` before pushing.
+
 ## Changelog
+
+### 2026-06-28 — Session 5 (oracle harness start + first result + .git recovery)
+- Built `eval/metrics.py` (Spearman, top-k recall, bootstrap CI), `scorers/ssh2.py` (SSH2-direct +
+  `ssh2_p_positive` helper), `scripts/pseudolabel_oas.py` (checkpointed OAS labeler, ready for the
+  subset). **First result — SSH2-direct floor on GDPa3: Spearman 0.175 (95% CI −0.06..0.38),
+  top-10% recall 0.25** (raw weak signal barely ranks HIC on the clean external set; the intended floor).
+- **Drive corrupted `.git` (3rd incident):** deleted `.git/index`, left a stale `index.lock`.
+  Recovered via `rm .git/index.lock && git reset HEAD` (HEAD/origin intact). **Action needed:**
+  collaborator should work from their OWN local clone (non-Drive) + push to GitHub — sharing one
+  Drive-synced working tree + `.git` between two writers is corrupting git itself.
+- GDPa4 (bispecifics): out of scope for this experiment (multi-chain format our VH/VL embedding +
+  OAS-trained generator don't handle; `hihplc_normretentiontime_median` is a different normalization).
+  Future extension, not now.
+
+### 2026-06-15 — Session 4 (GDPa3 held-out → simplified, leakage-free design)
 
 ### 2026-06-15 — Session 4 (GDPa3 held-out → simplified, leakage-free design)
 - Found GDPa3 (Ginkgo benchmark held-out, 80 abs, `hic_rt` on GDPa1 scale). Verified **0 overlap**

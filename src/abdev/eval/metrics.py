@@ -1,15 +1,45 @@
-"""Developability evaluation metrics (GOALS.md §8).
+"""Evaluation metrics for the HIC oracle (GOALS.md §8): Spearman, top-k recall, bootstrap CIs.
 
-Generated candidates are scored on: oracle HIC / AC-SINS, CamSol solubility, SAP aggregation,
-AbLang-2 naturalness (PLL), and distributional metrics (sequence recovery, germline identity).
-These reproduce/extend the legacy pipeline's eval (see legacy/developability_model/) so our
-DFM results are directly comparable to the reported baseline numbers.
-
-TODO(phase0): port oracle + CamSol + SAP scoring from legacy/; expose a single evaluate()
-that takes generated sequences and returns the GOALS.md §8 metric table.
+Scores are compared to true HIC by **rank** (Spearman), so a predictor on any scale works (e.g.
+SSH2.0's probability). Convention: a higher score means higher predicted HIC. The headline number
+is Spearman ρ on the external GDPa3 held-out, with a bootstrap CI (n=79 is small).
 """
 from __future__ import annotations
 
+import numpy as np
+from scipy.stats import spearmanr
 
-def evaluate(generated, parents):
-    raise NotImplementedError("Phase 0: port eval harness from legacy/.")
+
+def _clean(pred, true):
+    pred = np.asarray(pred, float)
+    true = np.asarray(true, float)
+    m = ~(np.isnan(pred) | np.isnan(true))
+    return pred[m], true[m]
+
+
+def spearman(pred, true) -> float:
+    pred, true = _clean(pred, true)
+    return float(spearmanr(pred, true)[0])
+
+
+def top_k_recall(pred, true, k: float = 0.1) -> float:
+    """Of the worst-k% antibodies by true HIC, the fraction also in the highest-predicted k%.
+
+    Assumes higher score = higher HIC. (Benchmark's secondary metric.)
+    """
+    pred, true = _clean(pred, true)
+    n = len(true)
+    k_n = max(1, int(round(k * n)))
+    top_true = set(np.argsort(-true)[:k_n].tolist())
+    top_pred = set(np.argsort(-pred)[:k_n].tolist())
+    return len(top_true & top_pred) / k_n
+
+
+def bootstrap_ci(pred, true, metric=spearman, n_boot: int = 1000, alpha: float = 0.05, seed: int = 0):
+    """Return (point_estimate, lo, hi) for `metric` via case resampling (fixed seed)."""
+    pred, true = _clean(pred, true)
+    rng = np.random.default_rng(seed)
+    n = len(true)
+    vals = [metric(pred[idx], true[idx]) for idx in (rng.integers(0, n, n) for _ in range(n_boot))]
+    lo, hi = np.percentile(vals, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    return metric(pred, true), float(lo), float(hi)

@@ -32,6 +32,7 @@ backbone = [
 # OAS access for the SSH2.0 pseudo-labeling pipeline (Phase 2, L2).
 oas = [
     "pyarrow>=15.0",
+    "rapidfuzz>=3.0",       # fast sequence-identity dedup vs held-out sets
     # "oas-utils",          # TODO: confirm exact PyPI/GitHub name before pinning
 ]
 # Sequence descriptors: CKSAAGP for SSH2.0 (L2), PROPERMAB features (L1).
