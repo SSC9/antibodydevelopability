@@ -19,7 +19,8 @@ CACHE_DIR = Path(os.environ.get("ABDEV_CACHE", REPO_ROOT / "data" / "cache"))
 # Canonical labeled dataset (see GOALS.md §8). 246 paired antibodies (train).
 GDPA1_CSV = DATA_DIR / "GDPa1_v1.2_20250814.csv"
 # External held-out test (Ginkgo benchmark), 80 abs; disjoint from GDPa1 and SSH2.0/Jain.
-GDPA3_XLSX = DATA_DIR / "GDPa3_20260106_full.xlsx"
+GDPA3_XLSX = DATA_DIR / "GDPa3_20260106_full.xlsx"          # raw source (multi-sheet)
+GDPA3_CSV = DATA_DIR / "GDPa3_20260106.csv"                # flattened, committed (scripts/convert_gdpa3_to_csv.py)
 # Isotype-stratified CV fold — used ONLY for hyperparameter selection (headline test = GDPa3).
 GDPA1_FOLD_COL = "hierarchical_cluster_IgG_isotype_stratified_fold"
 

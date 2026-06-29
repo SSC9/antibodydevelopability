@@ -1,7 +1,7 @@
 """Loader tests. GDPa1 ships in-repo; GDPa3 is skipped if the xlsx isn't present locally."""
 import pytest
 
-from abdev.config import GDPA3_XLSX
+from abdev.config import GDPA3_CSV
 from abdev.data.gdpa1 import load_gdpa1
 from abdev.data.gdpa3 import load_gdpa3
 
@@ -16,7 +16,7 @@ def test_gdpa1_schema():
     assert df.hic.notna().all() and df.vh.str.len().min() > 50
 
 
-@pytest.mark.skipif(not GDPA3_XLSX.exists(), reason="GDPa3 xlsx not present locally")
+@pytest.mark.skipif(not GDPA3_CSV.exists(), reason="GDPa3 CSV not present locally")
 def test_gdpa3_schema():
     df = load_gdpa3()
     assert SCHEMA <= set(df.columns)
