@@ -12,15 +12,41 @@
 
 ---
 
-## Current status (as of 2026-06-15)
+## Current status (as of 2026-06-30)
 
-**Phase 0 — Infra & baseline reproduction: IN PROGRESS. Scaffolding DONE & pushed to `main`.**
+**HIC weak-supervision oracle experiment: COMPLETE.** Verdict below; results committed (`3b906af`).
+Infra (uv env, package, GDPa1/GDPa3/OAS data + embeddings + pseudo-labels) all in place.
 
-Done: alignment; `GOALS.md`/`MEMORY.md`; fork reorganized (legacy/ + docs/); uv env
-(`pyproject.toml` + `uv.lock`, Python 3.11) synced to `~/.venvs/abdev`; `src/abdev/` package
-skeleton with documented seams; smoke tests pass; committed + pushed (commit `8fabb5a`).
-Remaining in Phase 0: confirm GDPa1 CSV schema + wire loaders/splits, port the eval harness
-from `legacy/`, reproduce the existing baseline numbers.
+### ▶ HANDOFF — read this first to continue in a new chat
+- **Env:** `export PATH=/opt/homebrew/bin:$PATH; export UV_PROJECT_ENVIRONMENT="$HOME/.venvs/abdev"`;
+  then `uv run ...`. Repo = the `SSC9/antibodydevelopability` fork in this Drive folder. Ground
+  truth: `GOALS.md` + this file. Commit often, `git fetch` before push (Drive corrupts `.git`; if
+  `git status` shows all-deleted, run `rm -f .git/index.lock && git reset HEAD`).
+- **VERDICT (HIC oracle):** On the leakage-free external **GDPa3** test — OAS SSH2.0 weak-supervision
+  pretraining **helps only in the low-data regime** (mean lift over backbones **+0.115 @ n=25**,
+  +0.05 @ n=50, ~0 by n≥100, ~0 at full data). **MSE pretraining > BCE** (`mse_keepall`/`mse_reinit`
+  carry the lift; `bce_reinit` ≈ 0). **Best absolute oracle = GoldOnly-Ridge, esm2-650m, CLS, no-std,
+  α=1.0 ≈ 0.51** (reproduces benchmark `esm2_ridge`=0.403 exactly on esm2-8m/mean). SSH2-direct
+  floor=0.175. Pretraining is validated (learns P_positive ρ=0.80 on OAS; pretrain-only→HIC ρ=0.21–0.30).
+- **Final-oracle recommendation:** ESM2-650m · **CLS** · **Ridge** (no-std, α=1.0) on all GDPa1.
+  WeakSup (MSE) only for scarce-label settings (<~100 labels).
+- **KEY CAVEAT / next experiment:** we only pretrained a **shallow MLP on FROZEN embeddings** — the
+  representation never changed. The traditional weak-sup win comes from **fine-tuning the encoder**.
+  → **NEXT: LoRA fine-tune ESM-2 on the 100k OAS SSH2.0 labels, then on GDPa1 HIC, eval GDPa3**
+  (matched control = GoldOnly-LoRA = LoRA on GDPa1 only). Needs GPU → Colab/notebook; `peft` dep;
+  start with esm2-8m. This is the version most likely to move the *full-data* number.
+- **How to reproduce:** `uv run python scripts/run_hic_experiment.py` (resumable → `results/hic_results.csv`);
+  figures via `from abdev import viz; viz.lift_figure(); viz.data_efficiency_figure(); viz.summary_bar()`;
+  narrative `notebooks/02_hic_oracle_experiment.ipynb`. Headline fig = `results/figures/lift.png`.
+- **Key files:** `src/abdev/{weaksup,oracle,viz,eval/metrics,data/embeddings,data/gdpa1,data/gdpa3,scorers/ssh2}.py`;
+  `scripts/{run_hic_experiment,pseudolabel_oas,convert_gdpa3_to_csv}.py`; `ssh2cli/` = SSH2.0 (P_positive).
+- **Data:** GDPa1 (train, `data/GDPa1_v1.2_20250814.csv`, + `fold` col), GDPa3 (external test,
+  `data/GDPa3_20260106.csv`), OAS embeddings `data/embeddings/{esm2-8m,esm2-650m,ablang2}/{gdpa1,gdpa3,oas}/`
+  (long schema id/chain/pool/emb; ESM2 chains H,L pools mean,cls; AbLang2 chains H,L,P pool mean — use
+  **P** as primary), OAS pseudo-labels `data/pseudolabels/ssh2_oas/`, OAS seqs `data/oas/oas_paired_human_100k.parquet`.
+- **AbLang2 note:** underperforms ESM-2 for HIC (0.21–0.30) — this is **benchmark-confirmed + expected**
+  (naturalness ≠ biophysics), not a bug; paired-P is correct. Its Ridge (0.21) < benchmark (0.356) →
+  seqcoding extraction possibly improvable (ablation backbone; doesn't affect the verdict).
 
 ## Key findings
 
@@ -218,7 +244,28 @@ Findings: 650M > 8M; **CLS > mean (650M)**; AbLang2 < ESM-2; standardization hur
   `data/oas/**`, `data/embeddings/**`.
 - Both push to `main`; stage files explicitly (never `git add -A`), `git fetch` before pushing.
 
+## Untested levers (for next sessions, priority order)
+
+1. **LoRA fine-tune ESM-2 encoder on OAS SSH2.0 labels → GDPa1 HIC** (matched control GoldOnly-LoRA).
+   The representation-learning version of weak-sup; most likely to move the full-data number. GPU/Colab,
+   `peft`, target attn query/value, r≈8–16. Start esm2-8m.
+2. **Multi-source weak labels** (SSH2.0 + SAP/charge/TAP/CamSol) multi-task pretraining — richer than
+   one hydrophobicity labeler.
+3. **Scale/tune pretraining** (corpus >100k, more epochs); **α/CV hyperparameter tuning** for Ridge/MLP.
+4. **AbLang2 rescoding (per-residue) + pool** instead of seqcoding; **ESM-2 + AbLang2 ensemble**.
+5. Then: fold the oracle into the DFM guidance side (posterior tempering), or write up the oracle
+   data-efficiency result standalone.
+
 ## Changelog
+
+### 2026-06-30 — Session 6 (WeakSup experiment run + verdict)
+- Ran the full data-efficiency sweep (511 runs) → `results/hic_results.csv` + figures + executed
+  `notebooks/02`. Verdict: OAS weak-sup helps only low-data (+0.115 @ n=25); MSE>BCE; best oracle =
+  Ridge esm2-650m CLS (0.51). See Current status / Results.
+- Fixed MLP instability (early-stop collapse → fixed-epoch+reg, std 0.157→0.012). Diagnostics confirm
+  pretraining works (learns P_positive ρ=0.80; pretrain-only→HIC 0.21–0.30), so the null-at-full-data
+  is genuine (for frozen-embedding shallow pretraining) — hence the LoRA next step.
+- Built `weaksup.py`, `oracle.py`, `viz.py` (lift/data-efficiency/summary figures), `run_hic_experiment.py`.
 
 ### 2026-06-28 — Session 5 (Track B: OAS subset + embeddings delivered)
 **Deliverable 1 — OAS paired-human subset: DONE → unblocks Track A's `scripts/pseudolabel_oas.py`.**
