@@ -120,5 +120,5 @@ def weaksup_finetune(pretrained: MLP, X_tr, y_tr, *, reinit_head: bool, epochs=6
     if reinit_head:
         model.head = nn.Linear(model.head.in_features, 1)
     _fit(model, X_tr, y_tr, loss="mse", epochs=epochs, lr=lr, wd=wd, batch=batch,
-         val_frac=val_frac, patience=patience, seed=seed, device=device)
+         val_frac=val_frac, seed=seed, device=device)
     return model
