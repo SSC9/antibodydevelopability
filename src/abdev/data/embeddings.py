@@ -5,7 +5,13 @@ Shard schema (the agreed contract): columns [id, chain, pool, emb], emb a fixed-
   * AbLang2:         chains {H, L, P} × {mean}   (P = native paired representation)
 
 A per-antibody feature = concatenation of the requested chains for one pool, in a fixed order.
-Default chains: ESM-2 → (H, L); AbLang2 → (P,) i.e. its native paired vector.
+Default chains are backbone-appropriate (see `scripts/embed_sequences.py` for how each was made):
+  * ESM-2 → **(H, L)**: H and L are genuine single-chain embeddings (ESM-2 is single-chain), so
+    concatenating them is the principled representation.
+  * AbLang2 → **(P,)**: P is AbLang2's native PAIRED seqcoding — true antibody context, its intended
+    representation. Its H/L rows are paired-mode runs with the *other chain emptied* (a degenerate
+    artifact), so AbLang2 H+L concat is an **ablation only**, never primary. Request it with
+    chains=("H","L").
 """
 from __future__ import annotations
 
@@ -32,6 +38,7 @@ def load_features(backbone: str, dataset: str, pool: str = "mean", chains=None):
     df = _load_shards(backbone, dataset)
     present = set(df.chain.unique())
     if chains is None:
+        # AbLang2 → native paired 'P' (correct antibody-level rep); ESM-2 → single-chain H+L concat.
         chains = ("P",) if "P" in present else ("H", "L")
     sub = df[df.pool == pool]
     vec = {(r.id, r.chain): np.asarray(r.emb, dtype=np.float32)
