@@ -64,6 +64,49 @@ def data_efficiency_figure(csv="results/hic_results.csv", backbone="esm2-650m", 
     return fig
 
 
+def lift_figure(csv="results/hic_results.csv",
+                variants=("mse_keepall", "mse_reinit", "bce_reinit"),
+                out="results/figures/lift.png"):
+    """The headline: weak-supervision lift (WeakSup − GoldOnly-MLP) vs training size,
+    mean ± σ across the backbone×representation combos. Positive at low n = worth it when scarce."""
+    df = pd.read_csv(csv)
+    recs = []
+    for (bb, rep), g in df.groupby(["backbone", "representation"]):
+        p = g.groupby(["model", "n_train"]).rho.mean().unstack("model")
+        if "GoldOnly-MLP" not in p.columns:
+            continue
+        for n in p.index:
+            for v in variants:
+                mv = f"WeakSup-{v}"
+                if mv in p.columns:
+                    recs.append({"n": int(n), "variant": v, "lift": p.loc[n, mv] - p.loc[n, "GoldOnly-MLP"]})
+    L = pd.DataFrame(recs)
+    agg = {v: L[L.variant == v].groupby("n").lift.agg(["mean", "std"]).reset_index() for v in variants}
+    ymax = max(float((a["mean"] + a["std"]).max()) for a in agg.values()) + 0.02
+    ymin = min(float((a["mean"] - a["std"]).min()) for a in agg.values()) - 0.02
+    fig, ax = plt.subplots(figsize=(6.4, 4.4))
+    ax.axhspan(0, ymax, color="#55A868", alpha=0.06)
+    for v in variants:
+        s = agg[v]
+        ax.plot(s.n, s["mean"], "-o", ms=6, lw=2.2, color=C.get(f"WeakSup-{v}", "gray"),
+                label=f"WeakSup {v}")
+        ax.fill_between(s.n, s["mean"] - s["std"], s["mean"] + s["std"],
+                        color=C.get(f"WeakSup-{v}", "gray"), alpha=0.13)
+    ax.axhline(0, color="black", lw=1.1)
+    ax.set_ylim(ymin, ymax)
+    ax.set(xlabel="GDPa1 training antibodies (n)",
+           ylabel="Δ Spearman ρ  (WeakSup − GoldOnly-MLP)",
+           title="Weak-supervision lift vs training-set size\n(mean ± σ across 5 backbone×pooling combos)")
+    ax.annotate("pretraining helps\nwhen labels are scarce", xy=(25, agg["mse_keepall"]["mean"].iloc[0]),
+                xytext=(85, ymax * 0.7), fontsize=9, color="#333",
+                arrowprops=dict(arrowstyle="->", color="#777"))
+    ax.legend(loc="upper right", fontsize=9)
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out)
+    fig.savefig(str(out).replace(".png", ".pdf"))
+    return fig
+
+
 def summary_bar(csv="results/hic_results.csv", out="results/figures/summary_bar.png"):
     """Full-data ρ per model, grouped by backbone/representation."""
     df = pd.read_csv(csv)

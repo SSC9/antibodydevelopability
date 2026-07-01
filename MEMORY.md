@@ -195,7 +195,20 @@ pseudo-label (NOT the `Probability`/confidence-in-call field). No retraining/MRM
 | SSH2-feature esm2-650m (std) | 0.250 vs GoldOnly-std 0.264 | raw SSH2 feature adds no lift |
 
 Findings: 650M > 8M; **CLS > mean (650M)**; AbLang2 < ESM-2; standardization hurts (8m 0.403→0.106).
-**Bar WeakSup must beat ≈ 0.51 (esm2-650m CLS).** Hyperparameter (α) tuning via GDPa1 CV = a refinement.
+
+**WeakSup result (data-efficiency sweep, 5 backbone×pooling combos × 5 sizes × 5 seeds → 511 runs,
+`results/hic_results.csv`, fig `results/figures/lift.png`):**
+- **OAS weak-supervision pretraining IS worth it in the low-data regime.** Mean lift
+  (WeakSup − GoldOnly-MLP) over backbones: **+0.115 at n=25**, +0.05 at n=50, ~0 by n=100, ~0/slightly
+  negative at full data (242). The realistic scarce-label regime is exactly where it helps.
+- **MSE pretraining > BCE** (empirically): `mse_keepall`/`mse_reinit` carry the lift; `bce_reinit`
+  (my proposed "principled primary") hugs zero. → treat `P_positive` as a regression target + warm-start
+  the head. (Updates the earlier BCE recommendation.)
+- **Best absolute oracle stays GoldOnly-Ridge esm2-650m CLS ρ≈0.51**; WeakSup doesn't beat the
+  full-data bar — its value is *data efficiency*, not peak accuracy.
+- MLP training: fixed-epoch regularized (epochs=60, wd=3e-3, dropout=0.3, LayerNorm input, no
+  early-stop) — early-stopping on the tiny val split caused seed collapses (std 0.157→0.012).
+- Presentation: `notebooks/02_hic_oracle_experiment.ipynb` (thin; renders table + figures).
 
 ## Track ownership (avoid Drive/file collisions)
 
@@ -206,6 +219,34 @@ Findings: 650M > 8M; **CLS > mean (650M)**; AbLang2 < ESM-2; standardization hur
 - Both push to `main`; stage files explicitly (never `git add -A`), `git fetch` before pushing.
 
 ## Changelog
+
+### 2026-06-28 — Session 5 (Track B: OAS subset + embeddings delivered)
+**Deliverable 1 — OAS paired-human subset: DONE → unblocks Track A's `scripts/pseudolabel_oas.py`.**
+- `data/oas/oas_paired_human_100k.parquet` (gitignored, Drive-shared) + `*.manifest.json`.
+  Columns: `id, heavy, light, study, v_gene_h, j_gene_h, v_gene_l, j_gene_l`. Exactly 100k, seed=42.
+  **Track A: pseudo-label THIS exact file (reproducible, seed locked).**
+- Built by `scripts/build_oas_subset.py` (CPU, resumable). Pipeline: download all 610 OPIG paired
+  CSVs → keep metadata `Species=="human"` (580/610 files) → per-row productive/in-frame/no-stop,
+  IGH + IGK/IGL, valid 20-AA len 90–200 → clonotype dedup `(v_gene_h,j_gene_h,cdr3_h,cdr3_l)` →
+  held-out drop (exact + ≥95% heavy identity, rapidfuzz) vs GDPa1 ∪ Jain ∪ GDPa3 ∪
+  GDPa1+Jain2024-calibrated → random sample 100k.
+- Counts: 3,003,127 raw human paired → 2,392,734 unique clonotypes → drop 37,262 exact + 56,162
+  near → 2,299,310 → sample 100k. Verified: 0 dup (heavy,light), 0 non-AA, **0 exact heavy
+  overlap with held-out**. git SHA in manifest. (Gotcha: OPIG paired CSVs use single-letter loci
+  H/K/L, not IGH/IGK/IGL.) Raw gz cache is OUTSIDE Drive at `~/oas_raw` (3.4 GB; `ABDEV_OAS_RAW` to move).
+
+**Deliverable 2 — embeddings: GDPa1+GDPa3 DONE for all 3 backbones; OAS pending.**
+- `scripts/embed_sequences.py` + `notebooks/colab_embed_sequences.ipynb` (Colab GPU, per-shard
+  checkpoint/resume). Output contract (STABLE — Track A reads this):
+  `data/embeddings/{backbone}/{dataset}/shard_*.parquet`, cols `[id, chain, pool, emb(float16)]`.
+  - ESM-2 (esm2-8m 320-d, esm2-650m 1280-d): VH/VL separately, last hidden state → `mean`
+    (mask-aware) + `cls`; `chain∈{H,L}`, `pool∈{mean,cls}`. Concat `[vh,vl]` at use-time.
+  - AbLang2 (480-d): native paired `seqcoding` (`chain='P'`) + per-chain mean (`H`/`L`),
+    `pool='mean'`. **Use 'P' as the primary AbLang2 antibody feature** (paired model; per-chain
+    is ESM-parity ablation).
+- On Drive + verified: GDPa1 (246) + GDPa3 (80) for all 3 backbones (dims correct, no NaN).
+- TODO: notebook cell 7 → OAS embeddings (esm2-8m + ablang2 first, then esm2-650m long run).
+- Added `rapidfuzz` to the `oas` extra; pyproject `pyarrow` pinned `>=24.0.0`.
 
 ### 2026-06-28 — Session 5 (oracle harness start + first result + .git recovery)
 - Built `eval/metrics.py` (Spearman, top-k recall, bootstrap CI), `scorers/ssh2.py` (SSH2-direct +
